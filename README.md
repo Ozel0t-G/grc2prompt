@@ -8,7 +8,17 @@ Parts of the German-to-English translation and wording in this document were ass
 **License:** MIT
 ---
 
-## The Problem Worth Solving
+## Proof of Concept available online:
+The current Policy Passport generator can be tested here: https://ozel0t-g.github.io/grc2prompt/
+
+This is an early proof of concept intended for testing and discussion. Please do not use real company policies, personal data, confidential information, credentials, internal system details, or security-sensitive content when testing the online version. The current demo uses a free external AI service for generation, so any submitted text may be processed outside your organization’s controlled environment.
+
+Use synthetic, anonymized, or example policy text only.
+
+##
+
+
+## The Problem
 
 Generative AI is being deployed inside enterprises at a pace that most GRC teams simply weren't ready for. The tools are useful, developers adopt them fast, and the security and compliance functions are left trying to retrofit controls onto workflows that already exist. 
 
