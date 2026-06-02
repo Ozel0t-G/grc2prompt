@@ -17,6 +17,120 @@ Use synthetic, anonymized, or example policy text only.
 
 ##
 
+## Command Line Tool Technical Guide
+
+The repository includes a Python based command line prototype for generating Policy Passport artifacts from plain policy text. It is designed as a portable reference implementation that can run on macOS, Linux, and Windows with Python 3 and the Python standard library. No package installation is required for the current version.
+
+### 1. Purpose
+
+The command line tool performs the same core work as the web proof of concept. It reads a policy document, builds the Policy Passport extraction prompt, sends the request to an OpenAI compatible text endpoint, extracts the JSON object from the model response, normalizes the result, and writes both a structured JSON artifact and a plain text Passport artifact.
+
+The tool is useful when policy conversion should be repeatable, scriptable, or integrated into a local workflow. It can be used by a security team to convert test policies, by an engineer to validate generated Passport JSON, or by a governance team to prepare artifacts for review before wider deployment.
+
+### 2. Requirements
+
+Python 3 must be available on the machine.
+
+On macOS and Linux, check the Python version with:
+
+```bash
+python3 --version
+```
+
+On Windows, check the Python version with:
+
+```powershell
+py --version
+```
+
+The generate command requires internet access because the current proof of concept sends the policy text to an external AI endpoint. The prompt and validate commands can be used without an external service.
+
+### 3. Security Notice
+
+The default generate command uses the same proof of concept endpoint as the browser version. Submitted policy text is sent to `https://text.pollinations.ai/openai` with the model value `openai-fast`.
+
+Only use synthetic, public, or fully sanitized test data with this endpoint. Do not submit real company policies, personal data, customer data, secrets, credentials, internal system details, source code, legal material, incident details, or regulated information. For production use, replace the default endpoint with an approved enterprise model gateway or a provider that matches your security and compliance requirements.
+
+The tool requires explicit confirmation before sending data to the external endpoint. This is done with the `--yes` option.
+
+### 4. Generate a Passport
+
+Create a text file that contains a sanitized policy example. Then run:
+
+```bash
+python3 grc2prompt.py generate policy.txt --yes --json-out passport.json --text-out passport.txt
+```
+
+On Windows, the same command can be run with the Python launcher:
+
+```powershell
+py grc2prompt.py generate policy.txt --yes --json-out passport.json --text-out passport.txt
+```
+
+The command creates two files. `passport.json` contains the normalized machine readable rule set. `passport.txt` contains the portable Policy Passport text block that can be pasted into an AI system prompt, project instruction field, or agent configuration.
+
+### 5. Read Policy Text From Standard Input
+
+The tool can also read policy text from standard input. This is useful for shell pipelines or simple automation.
+
+```bash
+cat policy.txt | python3 grc2prompt.py generate - --yes --text-out passport.txt
+```
+
+Windows PowerShell example:
+
+```powershell
+Get-Content policy.txt | py grc2prompt.py generate - --yes --text-out passport.txt
+```
+
+When the input path is omitted or set to `-`, the tool reads from standard input.
+
+### 6. Create a Manual Prompt Without Calling an API
+
+The prompt command builds the exact instruction package that would be sent to the model, but it does not call any external service. This is useful when a user wants to paste the prompt into ChatGPT, Claude, Gemini, Copilot, or an internal model interface.
+
+```bash
+python3 grc2prompt.py prompt policy.txt --output manualprompt.txt
+```
+
+The resulting prompt can be reviewed by a human before use. It also supports manual workflows where the JSON response is copied back into the tool for validation.
+
+### 7. Validate or Convert an Existing Response
+
+If a model response already exists, the validate command can parse it, extract the JSON object, fill missing defaults, and produce clean output files.
+
+```bash
+python3 grc2prompt.py validate rawresponse.json --json-out passport.json --text-out passport.txt
+```
+
+The parser accepts plain JSON and also handles common model response formats where JSON is wrapped in a code fence or surrounded by explanatory text. If no JSON object can be found, the command exits with a clear error message.
+
+### 8. Output Format
+
+The JSON artifact follows the Policy Passport shape used by the web proof of concept. It includes the Passport version, company name, policy name, effective scope, rule list, behavioral instruction, and plain language summary.
+
+Each rule is normalized with a stable identifier, category, severity, rule text, violation examples, compliant examples, and an action. Invalid severity values are converted to `MEDIUM`. Invalid action values are converted to `WARN`.
+
+The text artifact is designed for portability. It contains a readable header, the scoped rule list, the expected AI behavior, and a closing marker. This makes it suitable for direct use in AI assistant instructions or as an artifact inside an agent project.
+
+### 9. Error Handling
+
+The tool exits with a non zero status code when input is missing, the network request fails, the endpoint returns an error, or the model response cannot be parsed as JSON.
+
+For troubleshooting, use the raw response option during generation:
+
+```bash
+python3 grc2prompt.py generate policy.txt --yes --raw-out rawresponse.txt --json-out passport.json --text-out passport.txt
+```
+
+The raw response file helps determine whether a failure came from the endpoint, the model output, or JSON parsing.
+
+### 10. Recommended Workflow
+
+Start with a small synthetic policy that contains five to twenty clear rules. Generate the JSON and text artifacts, review the extracted rules, and adjust the source policy if the model output is too broad or too vague. Once the output quality is acceptable, repeat the process with a sanitized representative policy sample.
+
+For production planning, treat this command line tool as a reference implementation. The next technical step should be provider configuration, enterprise authentication, audit logging, deterministic output checks, and a controlled approval process before any generated Passport is deployed into a real AI environment.
+
 
 ## The Problem
 
@@ -249,7 +363,7 @@ Web-based generator tool. Accepts free-text policy input, outputs a structured P
 Git-native passport versioning. Each passport is a tracked artifact with a changelog. When a source policy changes, the corresponding passport is flagged for regeneration. Audit log of deployments: which passport version was active at what time, on which platforms.
 
 **v3.0 — CLI & CI/CD Integration**  
-`policy-passport` CLI tool. Supports `generate`, `validate`, `diff`, and `deploy` subcommands. Integration with CI/CD pipelines so passport regeneration can be triggered automatically when policy documents change in a document management system.
+`policy-passport` Integration with CI/CD pipelines so passport regeneration can be triggered automatically when policy documents change in a document management system.
 
 **v4.0 — Violation Telemetry**  
 Instrumented passport format that includes a logging endpoint. When an LLM detects a violation and the action is LOG or WARN, the event is sent to a central telemetry service. This provides GRC teams with visibility into how often policy rules are being triggered, by which teams, and on what prompt categories — without logging the actual prompt content.
